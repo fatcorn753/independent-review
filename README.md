@@ -37,6 +37,20 @@ Arguments: `[academic|technical|path/to/rubric.md] [output file]`
 | `technical` | Technical reports: correctness, reproducibility, quantitative evidence, limitations |
 | a file path | Your own rubric (copy `skills/write-report/rubrics/academic.md` as a starting point) |
 
+## Source checking / 参考文献の検証
+
+When the report cites sources, `write-report` also launches `source-checker` in parallel. It extracts the reference list and citations itself, fetches every source, and returns a table:
+
+- **Reachability**: HTTP status and final URL (404, redirects, paywalls)
+- **Bibliographic accuracy**: authors/organization, title, year, volume/pages, DOI against the real source
+- **Claim check**: each claim the report attributes to a source, judged `SUPPORTED / PARTIAL / CONTRADICTED / NOT FOUND / UNVERIFIABLE` with evidence from the source
+- **Cross-check**: citations with no list entry, entries never cited, wrong access dates
+
+`CONTRADICTED`, `NOT FOUND`, and unreachable references are blocking. `UNVERIFIABLE` (e.g. paywalled) is never passed silently; provide the PDF or soften the claim.
+Web content is treated as data, not instructions, and only URLs are sent to the network (never your report text). `WebFetch` and `curl` will trigger permission prompts.
+
+参考文献が引用されているレポートでは、`source-checker` が並行して起動し、URL の到達性・書誌情報の一致・本文の主張が出典で裏付けられるかを、出典を自分で取得して確認します。
+
 ## Code review too / コードにも使える
 
 ```
@@ -72,6 +86,7 @@ skills/write-code/SKILL.md        orchestration for programs
 skills/write-code/rubrics/        code.md (8 quality criteria)
 agents/report-reviewer.md         independent report reviewer (read-only)
 agents/code-reviewer.md           independent code reviewer (read-only + test runs)
+agents/source-checker.md          reference fact-checker (WebFetch + curl status)
 ```
 
 ## License
