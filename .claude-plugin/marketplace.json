@@ -1,0 +1,17 @@
+{
+  "name": "report-review-claude",
+  "owner": {
+    "name": "report-review-claude contributors"
+  },
+  "plugins": [
+    {
+      "name": "report-review",
+      "source": "./",
+      "description": "Report writing workflow with an independent reviewer subagent.",
+      "author": {
+        "name": "report-review-claude contributors"
+      }
+    }
+  ],
+  "description": "Report writing with an independent reviewer agent."
+}
