@@ -1,15 +1,22 @@
 {
-  "name": "report-review",
-  "description": "Write reports and code with an independent reviewer agent: draft, get evaluated in a fresh context against a rubric, revise, repeat. / 独立したレビュアーエージェントが評価するレポート執筆ワークフロー",
-  "version": "0.1.0",
+  "name": "independent-review",
+  "description": "An AI that grades its own homework is too generous. Write reports and code, then have an independent reviewer agent (fresh context, read-only) score them against a rubric, fact-check your references, and send them back until they pass. / 書いた本人ではなく、独立したレビュアーが評価・出典検証するレポート/コード作成ワークフロー",
+  "version": "0.2.0",
   "license": "MIT",
   "keywords": [
+    "review",
     "report",
     "writing",
-    "review",
-    "subagent"
+    "code-review",
+    "fact-check",
+    "citations",
+    "subagent",
+    "rubric"
   ],
   "author": {
-    "name": "report-review-claude contributors"
-  }
+    "name": "fatcorn753",
+    "url": "https://github.com/fatcorn753"
+  },
+  "homepage": "https://github.com/fatcorn753/independent-review",
+  "repository": "https://github.com/fatcorn753/independent-review"
 }

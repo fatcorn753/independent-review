@@ -1,17 +1,18 @@
 {
-  "name": "report-review-claude",
+  "name": "independent-review",
   "owner": {
-    "name": "report-review-claude contributors"
+    "name": "fatcorn753",
+    "url": "https://github.com/fatcorn753"
   },
   "plugins": [
     {
-      "name": "report-review",
+      "name": "independent-review",
       "source": "./",
-      "description": "Report writing workflow with an independent reviewer subagent.",
+      "description": "Write reports and code with an independent reviewer agent; fact-check references.",
       "author": {
-        "name": "report-review-claude contributors"
+        "name": "fatcorn753"
       }
     }
   ],
-  "description": "Report writing with an independent reviewer agent."
+  "description": "Independent reviewer agents for reports, code, and citations."
 }

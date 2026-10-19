@@ -1,0 +1,33 @@
+name: Reviewer misjudged (passed a flawed draft / blocked a good one)
+description: The verdict, score, or a finding looks wrong
+labels: ["reviewer-quality"]
+body:
+  - type: input
+    id: command
+    attributes:
+      label: Command you ran
+      placeholder: /independent-review:write-report technical report.md
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What went wrong
+      options:
+        - Passed a draft with a real flaw (missed a defect)
+        - Blocked or marked down something that is fine
+        - Source check gave a wrong verdict (SUPPORTED/CONTRADICTED/...)
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: The finding or verdict, the text it concerns, and why you think it is wrong. Remove anything private.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Plugin version and Claude Code version

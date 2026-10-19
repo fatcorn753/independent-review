@@ -1,0 +1,23 @@
+name: Rubric proposal
+description: Suggest a new rubric (thesis, English paper, README, API design...)
+labels: ["rubric"]
+body:
+  - type: input
+    id: kind
+    attributes:
+      label: What kind of document or code is it for?
+    validations:
+      required: true
+  - type: textarea
+    id: criteria
+    attributes:
+      label: Criteria you would check
+      description: What would a careful reviewer look for? What should always block a pass?
+    validations:
+      required: true
+  - type: checkboxes
+    id: pr
+    attributes:
+      label: Contribution
+      options:
+        - label: I can open a pull request (see CONTRIBUTING.md)

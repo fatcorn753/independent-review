@@ -1,92 +1,114 @@
-# report-review-claude
+# independent-review
 
-A Claude Code plugin that writes reports with an **independent reviewer agent**.
-Claude drafts the report, a separate subagent with a fresh context evaluates it against a rubric, and Claude revises until it passes.
+**An AI that grades its own homework is too generous.**
+This Claude Code plugin has a *separate* reviewer agent, with a fresh context and read-only tools, score your report or code against a rubric, fact-check your references, and send it back until it passes.
 
-独立したレビュアーエージェントが評価する、レポート執筆用の Claude Code プラグインです。
-Claude が下書きを書き、まっさらなコンテキストの別エージェントがルーブリックで評価し、合格するまで修正します。
+**自分で書いたものを自分で評価すると甘くなります。**
+書いた本人ではなく、まっさらなコンテキストの別エージェントが、ルーブリックで採点し、参考文献を出典に当たって検証し、合格するまで差し戻す Claude Code プラグインです。
 
-## Why / なぜ
-
-An author reviewing their own draft tends to approve it. The reviewer here never sees the author's reasoning, only the file, the requirements, and the rubric, and its job is to find defects.
-
-自分で書いたものを自分で評価すると甘くなります。レビュアーには執筆の経緯を渡さず、ファイル・要件・ルーブリックだけを渡し、欠陥を探させます。
+| You ask for | What happens |
+|---|---|
+| a report | draft → independent review (rubric) + reference check → revise → re-review in a **new** context |
+| code | implement + tests → independent review on 8 quality criteria (runs your tests) → revise |
 
 ## Install / インストール
 
 In Claude Code:
 
 ```
-/plugin marketplace add fatcorn753/report-review-claude
-/plugin install report-review@report-review-claude
+/plugin marketplace add fatcorn753/independent-review
+/plugin install independent-review@independent-review
 ```
+
+Then run `/reload-plugins` (or restart).
 
 ## Usage / 使い方
 
-Ask in natural language, or call the skill directly:
+```
+/independent-review:write-report technical report.md
+/independent-review:write-report academic essay.md
+/independent-review:write-code
+```
+
+Or just ask in plain language: "write a report on X and have it independently reviewed."
+
+Report arguments: `[academic|technical|path/to/rubric.md] [output file]`
+
+## What it looks like / 実例
+
+From a real run (full output in [docs/examples](docs/examples/)):
 
 ```
-/report-review:write-report technical report.md
+Round 1  report-reviewer  31/40  REVISE
+  BLOCKING: report is ~450 chars but the brief asked for ~200
+Round 2  report-reviewer  33/40  PASS   (fresh reviewer, no memory of round 1)
 ```
 
-Arguments: `[academic|technical|path/to/rubric.md] [output file]`
+Reference check on a deliberately flawed draft:
 
-| Rubric | For |
-|---|---|
-| `academic` | University reports: task fit, thesis, logic, evidence, citation, analysis |
-| `technical` | Technical reports: correctness, reproducibility, quantitative evidence, limitations |
-| a file path | Your own rubric (copy `skills/write-report/rubrics/academic.md` as a starting point) |
+| Claim in the report | Verdict | Evidence |
+|---|---|---|
+| α = 2/(span+1) | SUPPORTED | docs: "α = 2 / (span + 1), for span ≥ 1" |
+| "always runs with adjust=False" | **CONTRADICTED** | docs: `adjust` is "bool, default True" |
+| "proposed by Brown in 1960" [2] | UNVERIFIABLE | URL returns 404; the list itself says 1956 |
 
-## Source checking / 参考文献の検証
+It also caught a mismatch nobody planted: the reference said "pandas 2.2" but the link serves the 3.0.6 docs.
 
-When the report cites sources, `write-report` also launches `source-checker` in parallel. It extracts the reference list and citations itself, fetches every source, and returns a table:
+## What gets checked / 検証内容
 
+**Reports** (`report-reviewer`, read-only): rubric scores with a verbatim quote for every finding. Built-in rubrics: `academic` (task fit, thesis, logic, evidence, citation, analysis) and `technical` (correctness, reproducibility, quantitative evidence, limitations). Bring your own rubric as a Markdown file.
+
+**References** (`source-checker`): runs in parallel when the report cites sources. It fetches every source itself and returns:
 - **Reachability**: HTTP status and final URL (404, redirects, paywalls)
-- **Bibliographic accuracy**: authors/organization, title, year, volume/pages, DOI against the real source
-- **Claim check**: each claim the report attributes to a source, judged `SUPPORTED / PARTIAL / CONTRADICTED / NOT FOUND / UNVERIFIABLE` with evidence from the source
-- **Cross-check**: citations with no list entry, entries never cited, wrong access dates
+- **Bibliographic accuracy**: authors/organization, title, year, volume/pages, DOI vs the real source
+- **Claim check**: `SUPPORTED / PARTIAL / CONTRADICTED / NOT FOUND / UNVERIFIABLE`, with evidence from the source
+- **Cross-check**: citations with no list entry, entries never cited, implausible access dates
+- **Necessity**: is the source actually used by the text?
 
-`CONTRADICTED`, `NOT FOUND`, and unreachable references are blocking. `UNVERIFIABLE` (e.g. paywalled) is never passed silently; provide the PDF or soften the claim.
-Web content is treated as data, not instructions, and only URLs are sent to the network (never your report text). `WebFetch` and `curl` will trigger permission prompts.
+`CONTRADICTED`, `NOT FOUND` and unreachable references are blocking. `UNVERIFIABLE` (e.g. paywalled) is never passed silently.
 
-参考文献が引用されているレポートでは、`source-checker` が並行して起動し、URL の到達性・書誌情報の一致・本文の主張が出典で裏付けられるかを、出典を自分で取得して確認します。
+**Code** (`code-reviewer`): readability, maintainability, extensibility, reliability/robustness, efficiency, reusability, testability, portability ([rubric](skills/write-code/rubrics/code.md)). It may run your existing tests, linters and build (verification only). Failing tests are blocking.
 
-## Code review too / コードにも使える
+## Design / 設計
 
-```
-/report-review:write-code
-```
+- The reviewer receives only the file path, the requirements and the rubric. Never the author's reasoning or self-assessment.
+- Each round uses a **new** reviewer. Maximum 3 rounds, then the remaining issues are reported to you.
+- Report reviewer: `Read, Grep, Glob` only. It cannot edit anything.
+- The author may not cite a source it did not read, invent a DOI/URL/date, or edit the rubric to pass.
+- Web pages are treated as data, never as instructions. Only URLs go to the network, never your report text.
 
-`write-code` implements a program, then an independent `code-reviewer` scores it on eight software-quality criteria: readability, maintainability, extensibility, reliability/robustness, efficiency, reusability, testability, portability (`skills/write-code/rubrics/code.md`).
-The code reviewer may run the project's existing tests, linters, and build with Bash (verification only; it is instructed not to modify files, install packages, or use the network). Failing tests are a blocking issue.
+### Permissions and cost
 
-プログラム作成時は、可読性・保守性・拡張性・信頼性/堅牢性・効率性・再利用性・テスト容易性・移植性の8観点で評価します。レビュアーは既存のテスト・lint・ビルドの実行のみ Bash で行えます(ファイル変更・インストール・ネットワークは禁止と指示しています)。
+`source-checker` uses `WebFetch` and `curl`, and `code-reviewer` runs your tests, so Claude Code will ask for permission. Each review round is an extra subagent run, so expect more time and tokens than a single draft.
 
-## Flow (reports) / 流れ(レポート)
+### Limits
 
-1. Claude collects the requirements and writes the draft to a file.
-2. `report-reviewer` (read-only tools: Read, Grep, Glob) receives only the file path, the requirements, and the rubric.
-3. It returns `PASS` or `REVISE`, per-criterion scores, and findings with verbatim quotes.
-4. Claude fixes the findings and calls a **new** reviewer. Maximum 3 rounds; remaining issues are reported to you.
-
-## Design notes / 設計メモ
-
-- The report reviewer cannot edit files (read-only tools); neither reviewer can see the author's self-assessment.
-- Every finding must include a quote from the report, so vague criticism is filtered out.
-- Claude is instructed not to fabricate citations or data to please the reviewer, and not to edit the rubric to pass.
-- The reviewer is an LLM: it reduces blind spots but does not replace your own final read.
+The reviewer is an LLM. It reduces blind spots but does not replace your own final read. It cannot verify paywalled sources unless you supply the file, and it cannot judge claims that need domain experiments it cannot run.
 
 ## Layout / 構成
 
 ```
-.claude-plugin/    plugin.json, marketplace.json
-skills/write-report/SKILL.md      orchestration (draft -> review -> revise)
-skills/write-report/rubrics/      academic.md, technical.md
-skills/write-code/SKILL.md        orchestration for programs
-skills/write-code/rubrics/        code.md (8 quality criteria)
+.claude-plugin/                   plugin.json, marketplace.json
+skills/write-report/              orchestration + rubrics (academic, technical)
+skills/write-code/                orchestration + rubric (code)
 agents/report-reviewer.md         independent report reviewer (read-only)
 agents/code-reviewer.md           independent code reviewer (read-only + test runs)
 agents/source-checker.md          reference fact-checker (WebFetch + curl status)
+docs/examples/                    real outputs
+```
+
+## Contributing / 貢献
+
+New rubrics (thesis, English papers, README, API design...) are the easiest contribution. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Migrating from report-review-claude
+
+The repository and plugin were renamed. Remove the old one and install again:
+
+```
+/plugin marketplace remove report-review-claude
+/plugin marketplace add fatcorn753/independent-review
+/plugin install independent-review@independent-review
 ```
 
 ## License
